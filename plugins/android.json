@@ -40,6 +40,9 @@
         },
         "cordova-plugin-geolocation": {
             "PACKAGE_NAME": "io.cordova.hellocordova"
+        },
+        "cordova-plugin-splashscreen": {
+            "PACKAGE_NAME": "com.scratch.appTrackerBO"
         }
     },
     "dependent_plugins": {}

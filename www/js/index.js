@@ -45,9 +45,19 @@ var watchPos = null;
 var lat="";
 var lng="";
 var mapView="";
+var selectedEmpl="";
+var map;
 
 $(document).ready(function () {
     $( "#sideMenu" ).enhanceWithin().panel();
+    
+    $("#loginForm input").keyup(function (e) {
+        if (e.keyCode == 13) {
+            $("#login").trigger("click");
+            return false;
+        }
+    });
+    
     var model = getDeviceType();
     
     if (model =="iOS") {
@@ -59,11 +69,21 @@ $(document).ready(function () {
         var name = $("#userName").val();
         var pwd = $("#password").val();
         if (name == "") {
-            showAlert("Please fill your user name");
+            showAlert(LOGIN_NAME_EMPTY);
+            return false;
         } else if (pwd == "") {
-            showAlert("Please fill your user password");
+            showAlert(LOGIN_PASSWORD_EMPTY);
+            return false;
         } else {
-            $.mobile.changePage("homepage.html",{transition: "flip"});
+            var data={
+                name:name,
+                password:pwd,
+                from:"BO",
+                mobile_code:HASH
+            }
+            USER_NAME=name;
+            USER_PASSWORD=pwd;
+            callAjax("POST",LOGIN_URL,data,loginSuccess,"Y","Y");
         }
     });
     
@@ -103,39 +123,132 @@ $(document).ready(function () {
             event.stopPropagation();
             event.stopImmediatePropagation();
             mapView="singel";
+            selectedEmpl = $(this).attr("dataId");
+            
             $.mobile.changePage("location.html",{transition: "slide"});
         });
+        
+        $(document).on("change", "#branchOption", function(event) {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            var branch = $(this).val();
+            if (branch!="") {
+                var data = {
+                    name:USER_NAME,
+                    password:USER_PASSWORD,
+                    branch:branch,
+                    mobile_code:HASH
+                }
+                callAjax("POST",GETMEMBER_URL,data,getMember,"Y","Y");
+            }
+        });
+        
+        $(document).on("keyup", "#searchEmpl", function(event) {
+            var key = $(this).val();
+            var branch = $("#branchOption option:selected").val();
+            if (branch!="") {
+                $("#employeeListing > li").each(function() {
+                    if ($(this).text().toLowerCase().search(key.toLowerCase()) > -1) {
+                        $(this).show();
+                    }
+                    else {
+                        $(this).hide();
+                    }
+                });
+            }
+        });
+    });
+    $(document).on("pageshow", "#homePage", function(event) {
+        generate.select(USER_BRANCH,"branchOption");
     });
     
     $(document).on("pageinit", "#employeePage", function(event) {
         $(document).on("click", ".backBtn", function(event) {
             event.stopPropagation();
             event.stopImmediatePropagation();
-            $.mobile.changePage("homepage.html",{transition: "slide", reverse:true});
+            $.mobile.back();
         });
     });
     
     $(document).on("pageinit", "#locationPage", function(event) {
+        if (mapView=="global") {
+            $(".menuIcon").show();
+            $(".backBtn").hide();
+        } else {
+            $(".menuIcon").hide();
+            $(".backBtn").show();
+        }
         $(document).on("click", ".backBtn", function(event) {
             event.stopPropagation();
             event.stopImmediatePropagation();
             $.mobile.changePage("homepage.html",{transition: "slide", reverse:true});
         });
+        
+        $(document).on("change", "#branchOptionLocation", function(event) {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            var branch = $(this).val();
+            if (branch!="") {
+                var data = {
+                    name:USER_NAME,
+                    password:USER_PASSWORD,
+                    branch:branch,
+                    mobile_code:HASH
+                }
+                callAjax("POST",GETMEMBER_URL,data,generateuserMap,"Y","N");
+            }
+        });
+        
+        $(document).on("click", ".employeeMarker", function(event) {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            var latitude = $(this).attr("data-lat");
+            var longitude = $(this).attr("data-lng");
+            var latLng = new google.maps.LatLng(latitude, longitude);
+            map.setCenter(latLng);
+        });
     });
     
     $(document).on("pageshow", "#locationPage", function(event) {
         if (mapView=="global") {
-            realtimeMap();
-            $("#employeeList").show();
+            generate.select(USER_BRANCH,"branchOptionLocation");
+            $("#branchLocation").show();
+            $(".menuIcon").show();
+            $(".backBtn").hide();
         } else {
-            singelMap();
+            $(".menuIcon").hide();
+            $(".backBtn").show();
+            var data = {
+                name: selectedEmpl,
+                mobile_code: HASH
+            }
+            callAjax("POST",GET_TRACK_URL,data,singelMap,"Y","N");
         }
     });
     
 });
 
-function realtimeMap(){
-    var map;
+function generateuserMap(res) {
+    var listUser = {};
+    var users = [];
+    for(var i=0;i<res.count;i++) {
+        var user = {};
+        user.name = res.member[i].CN;
+        users.push(user);
+    }
+    listUser.list_name = users;
+    var paramUser = JSON.stringify(listUser);
+    var data= {
+        name: paramUser,
+        mobile_code: HASH
+    }
+    
+    setTimeout(function(){
+        callAjax("POST",GET_LOCATION,data,realtimeMap,"N","Y");    
+    },500);
+}
+
+function realtimeMap(res){
     var bounds = new google.maps.LatLngBounds();
     var mapOptions = {
       zoom: 15,
@@ -146,27 +259,21 @@ function realtimeMap(){
     
     
     // Multiple Markers
-    var markers = [
-        ['Sudirman', -6.191906,106.822944],
-        ['Matraman', -6.197538,106.856074],
-        ['Mampang', -6.256838,106.828008]
-    ];
-    
+    var markers = [];
+    var userList ="";
     // Info Window Content
-    var infoWindowContent = [
-        ['<div class="info_content">' +
-        '<h3>Robert Maramis</h3>' +
-        '<p>Jln Sudirman</p>'+
-        '</div>'],
-        ['<div class="info_content">' +
-        '<h3>Bryan</h3>' +
-        '<p>Jln Matraman</p>' +
-        '</div>'],
-        ['<div class="info_content">' +
-        '<h3>Sulis</h3>' +
-        '<p>Jln Mampang</p>' +
-        '</div>']
-    ];
+    var infoWindowContent = [];
+    
+    for(var i=0;i<res.list_name.length;i++) {
+        var singelMarker=[];
+        var singelInfoWindow=[];
+        singelMarker.push(res.list_name[i].name,res.list_name[i].latitude,res.list_name[i].longitude);
+        markers.push(singelMarker);
+        
+        userList += '<li class="employeeMarker" data-lat="'+res.list_name[i].latitude+'" data-lng="'+res.list_name[i].longitude+'">'+res.list_name[i].name+'</li>';
+        singelInfoWindow.push('<div class="info_content"><h3>'+res.list_name[i].name+'</h3><p>'+res.list_name[i].address+'</p></div>');
+        infoWindowContent.push(singelInfoWindow);
+    }
     
     // Display multiple markers on a map
     var infoWindow = new google.maps.InfoWindow(), marker, i;
@@ -178,6 +285,7 @@ function realtimeMap(){
         marker = new google.maps.Marker({
             position: position,
             map: map,
+            icon: 'img/finalMarker.png',
             title: markers[i][0]
         });
         
@@ -198,54 +306,182 @@ function realtimeMap(){
         //this.setZoom(13);
         google.maps.event.removeListener(boundsListener);
     });
+    
+    $("#employeeMap").css("display","block");
+    $("#employeeListing").html(userList);
+    $("#employeeList").show();
+    
+    google.maps.event.trigger(map, 'resize');
+    map.fitBounds(bounds);
 }
 
-function singelMap() {
-    var dHeight=$(document).height()-50;
-    $("#employeeMap").css("height",dHeight+"px");
+function singelMap(res) {
+    if (res.coords.length==0) {
+        loading.hide();
+        showAlertCallback(GET_TRACK_NULL,returnPage);
+        return;
+    }
+    
     var mapOptions = {
       zoom: 3,
       center: {lat: 0, lng: -180},
       mapTypeId: google.maps.MapTypeId.ROADMAP
     };
     var map = new google.maps.Map(document.getElementById("employeeMap"),mapOptions);
+    var bounds = new google.maps.LatLngBounds();
     
-    var pathCoord = [
-            {lat:-6.192414, lng:106.823453},
-            {lat:-6.193278, lng:106.823142},
-            {lat:-6.191849, lng:106.822885},
-            {lat:-6.189907, lng:106.822820},
-            {lat:-6.183511, lng:106.822836},
-            {lat:-6.171607, lng:106.822708},
-            {lat:-6.155692, lng:106.817987},
-            {lat:-6.147286, lng:106.816056}
-        ];
+    var dHeight=$(document).height()-50;
+    $("#employeeMap").css("height",dHeight+"px");
+    var pathCoord = [];
+    var modLength = 0;
+    if (res.coords.length>8) {
+        modLength = Math.ceil(res.coords.length / 8);
+    }
+    var minWay = 0;
+    var maxWay = 8;
     
-    var service = new google.maps.DirectionsService();
-    var directionsDisplay = new google.maps.DirectionsRenderer();    
-    directionsDisplay.setMap(map);
+    console.log(modLength);
     
-    var waypts = [];
-    for(j=1;j<pathCoord.length-1;j++){            
-          waypts.push({location: pathCoord[j],
-                       stopover: true});
+    if (modLength>0) {
+        for(var i=0;i<modLength;i++){
+            wayPointGenerate(map, bounds, res,minWay,maxWay);
+            minWay = minWay+8;
+            maxWay = maxWay+8;
+        }   
+    } else {
+        wayPointGenerate(map, bounds, res,minWay,maxWay);
     }
     
+    $("#employeeMap").css("display","block");
+    loading.hide();
+    
+    google.maps.event.trigger(map, 'resize');
+    map.fitBounds(bounds);
+    $(".legend").show();
+}
+
+var stepDisplay;
+var markerArray = [];
+var infowindow = null;
+var marker = null;
+
+function wayPointGenerate(map, bounds, res,minWay,maxWay) {
+    var pathCoord = [];
+    // Multiple Markers
+    var markers = [];
+    // Info Window Content
+    var infoWindowContent = [];
+    var waypts=[];
+    
+    if (maxWay>res.coords.length) {
+        maxWay=res.coords.length;
+    }
+    
+    for (var i=minWay;i<maxWay;i++){
+        var latlngobj = {};
+        latlngobj.lat = res.coords[i].latitude;
+        latlngobj.lng = res.coords[i].longitude;
+        pathCoord.push(latlngobj);
+        
+        var iconMarker = "img/finalMarker.png";
+        if (res.coords[i].check_in==1) {
+            iconMarker = "img/finalMarkerCheckin.png";
+        } else if (i==0 && minWay==0) {
+            iconMarker = "img/finalMarkerEnd.png";
+        } else if (i==markers.length-1 && maxWay==res.coords.length) {
+            iconMarker = "img/finalMarkerEnd.png";
+        }
+        
+        var singelMarker=[];
+        var singelInfoWindow=[];
+        singelMarker.push("title",res.coords[i].latitude,res.coords[i].longitude,iconMarker);
+        markers.push(singelMarker);
+        var time = res.coords[i].datetime.date.split(".")[0];
+        singelInfoWindow.push('<div class="info_content"><h4>'+selectedEmpl+'</h4><p><b>'+res.coords[i].address+'</b><br/>'+time+'</p></div>');
+        infoWindowContent.push(singelInfoWindow);
+    }
+    
+    var service = new google.maps.DirectionsService();
+    var directionsDisplay = new google.maps.DirectionsRenderer({suppressMarkers : true});
+    
+    // Instantiate an info window to hold step text.
+    stepDisplay = new google.maps.InfoWindow();
+
+    directionsDisplay.setMap(map);
+
+    for(j=1;j<pathCoord.length-1;j++){            
+          waypts.push({location: pathCoord[j],stopover: true});
+    }
+    
+    console.log(pathCoord[0]);
     var request = {
         origin: pathCoord[0],
         destination: pathCoord[pathCoord.length-1],
         waypoints: waypts,
         travelMode: google.maps.DirectionsTravelMode.DRIVING
-      };
-    service.route(request,function(result, status) {           
-        if(status == google.maps.DirectionsStatus.OK) {                 
-              directionsDisplay.setDirections(result);
-        } else { alert("Directions request failed:" +status); }
-    });
+    };
+      
+    // Display multiple markers on a map
+    var infoWindow = new google.maps.InfoWindow(), marker, i;
     
-    /*
-    var myLatlng = new google.maps.LatLng(lat, lng);
-    */ 
+    //setTimeout(function(){
+        service.route(request,function(result, status) {           
+            if(status == google.maps.DirectionsStatus.OK) {
+                //var warnings = document.getElementById("warnings_panel");
+                //warnings.innerHTML = "<b>" + result.routes[0].warnings + "</b>";
+    
+                directionsDisplay.setDirections(result);
+                //var leg = result.routes[ 0 ].legs[ 0 ];
+                
+                //showSteps(result,map);
+            } else {
+                console.log("Directions request failed:" +status);
+            }
+        });    
+    //},500);
+    
+    // Display multiple markers on a map
+    var infoWindow = new google.maps.InfoWindow(), marker, i;
+    
+    // Loop through our array of markers & place each one on the map
+    console.log("JUNLAH MARKER " + markers);
+    for( i = 0; i < markers.length; i++ ) {
+        //console.log(JSON.stringify(res.coords[i]) + " " + i);
+        //var iconMarker = "img/finalMarker.png";
+        //if (res.coords[i].check_in==1) {
+        //    iconMarker = "img/finalMarkerCheckin.png";
+        //} else if (i==0 && minWay==0) {
+        //    iconMarker = "img/finalMarkerEnd.png";
+        //} else if (i==markers.length-1 && maxWay==res.coords.length) {
+        //    iconMarker = "img/finalMarkerEnd.png";
+        //} 
+        
+        var position = new google.maps.LatLng(markers[i][1], markers[i][2]);
+        bounds.extend(position);
+        marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            icon: markers[i][3],
+            title: markers[i][0]
+        });
+        
+        // Allow each marker to have an info window    
+        google.maps.event.addListener(marker, 'click', (function(marker, i) {
+            return function() {
+                infoWindow.setContent(infoWindowContent[i][0]);
+                infoWindow.open(map, marker);
+            }
+        })(marker, i));
+
+        // Automatically center the map fitting all markers on the screen
+        map.fitBounds(bounds);
+    }
+
+    // Override our map zoom level once our fitBounds function runs (Make sure it only runs once)
+    var boundsListener = google.maps.event.addListener((map), 'bounds_changed', function(event) {
+        //this.setZoom(13);
+        google.maps.event.removeListener(boundsListener);
+    });
 }
 
 /**
@@ -274,7 +510,7 @@ function getDeviceType() {
 };
 
 function showAlert(content) {
-    var restHtml= '     <div class="modal-dialog modal-sm">'+
+    var restHtml= '     <div class="modal-dialog modal-sm alertBody">'+
                    '       <div class="modal-content">'+
                    '         <div class="modal-header">'+
                    '           <h4 class="modal-title">Mitsui Leasing</h4>'+
@@ -284,6 +520,24 @@ function showAlert(content) {
                    '         </div>'+
                    '         <div class="modal-footer">'+
                    '           <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>'+
+                   '         </div>'+
+                   '       </div>'+        
+                   '     </div>';
+    $("#mainModal").html(restHtml);
+    $("#mainModal").modal('show');
+}
+
+function showAlertCallback(content,callback) {
+    var restHtml= '     <div class="modal-dialog modal-sm">'+
+                   '       <div class="modal-content">'+
+                   '         <div class="modal-header">'+
+                   '           <h4 class="modal-title">Mitsui Leasing</h4>'+
+                   '         </div>'+
+                   '         <div class="modal-body">'+
+                   '           <p>'+content+'</p>'+
+                   '         </div>'+
+                   '         <div class="modal-footer">'+
+                   '           <div type="button" class="btn btn-default" onclick="'+callback()+'" data-dismiss="modal">Close</div>'+
                    '         </div>'+
                    '       </div>'+        
                    '     </div>';
@@ -318,4 +572,109 @@ var onSuccess = function(position) {
 function onError(error) {
     alert('code: '    + error.code    + '\n' +
           'message: ' + error.message + '\n');
+}
+
+function callAjax(method,url,data,callback,before,after) {
+    $.ajax({
+        type: method,
+        url: url,
+        data: data,
+        crossDomain: true,
+        timeout: AJAX_TIMEOUT_INT,
+        beforeSend: function( xhr ) {
+            if (before=="Y") {
+                loading.show();   
+            }
+        },
+        success: function (response) {
+            if (response==null) {
+                loading.hide();
+                showAlertCallback(AJAX_ERROR,returnPage);
+                return;
+            }
+            if (PROFILE=="DEV") {
+                response = $.parseJSON(response);   
+            }
+            console.log(response);
+            if(response.status == 1) {
+                callback(response);
+            } else {
+                loading.hide();
+                showAlert(response.msg);
+            }
+            if (after=="Y") {
+                loading.hide();
+            }
+        },
+        error: function (xhr, ajaxOptions, thrownError) {
+            if(ajaxOptions === "timeout") {
+                loading.hide();
+                showAlert(AJAX_TIMEOUT);
+            } else {
+                loading.hide();
+                showAlert(ajaxOptions);
+            }
+        }
+    });
+}
+
+function loginSuccess(res) {
+    if (res.status==1) {
+        USER_BRANCH=res.branch;
+        $.mobile.changePage("homepage.html",{transition: "flip"});
+    }
+}
+
+function getMember(res) {
+    console.log(JSON.stringify(res));
+    var restHtml = "";
+    for(var i=0;i<res.member.length;i++){
+        restHtml+='<li class="employeeList">'+
+                    '<div class="emplyProfilePic"><img src="img/icon-user-default.png"/></div>'+
+                    '<div class="emplyDetails">'+
+                    '<div class="emplyName">'+res.member[i].CN+'</div>'+
+                    '<div class="currentTask">'+res.member[i].address+
+                    '<br/>Telp: <a href="tel:'+res.member[i].phone_no+'">'+res.member[i].phone_no+'</a>'+
+                    '</div>'+
+                    '</div>'+
+                    '<div class="seeMap" dataId="'+res.member[i].CN+'"><i class="fa fa-map-marker fa-2x"></i></div>'+
+                    '<div class="clearfix clearBoth"></div>'+
+                    '</li>';
+    }
+    $("#employeeListing").html(restHtml);
+    $.mobile.loading('hide');
+}
+
+
+var generate = {
+    select: function(res,fieldName) {
+        var defv="-";
+        var restHtml ='<select id="'+fieldName+'" name="'+fieldName+'">'+
+                        '<option value="">Please select</option>';
+        //for (var key in res) {
+        for(var i=0;i<res.length;i++){
+            if (res[i]==defv) {
+                restHtml +="<option value='"+res[i]+"' selected>"+res[i]+"</option>";    
+            } else {
+                restHtml +="<option value='"+res[i]+"'>"+res[i]+"</option>";
+            }
+            
+        }
+        restHtml +="</select>";
+        $("#"+fieldName+"_div .compRender").html(restHtml);
+        $("#"+fieldName+"_div .compRender").selectmenu();
+    }
+}
+
+var loading = {
+    show: function() {
+        $("#loadingModal").modal();
+    },
+    hide: function() {
+        $("#loadingModal").modal('hide');
+    }
+}
+
+function returnPage() {
+    $.mobile.back();
 }
