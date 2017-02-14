@@ -50,6 +50,14 @@ var map;
 
 $(document).ready(function () {
     $( "#sideMenu" ).enhanceWithin().panel();
+    
+    $("#loginForm input").keyup(function (e) {
+        if (e.keyCode == 13) {
+            $("#login").trigger("click");
+            return false;
+        }
+    });
+    
     var model = getDeviceType();
     
     if (model =="iOS") {
@@ -62,14 +70,16 @@ $(document).ready(function () {
         var pwd = $("#password").val();
         if (name == "") {
             showAlert(LOGIN_NAME_EMPTY);
+            return false;
         } else if (pwd == "") {
             showAlert(LOGIN_PASSWORD_EMPTY);
+            return false;
         } else {
             var data={
                 name:name,
                 password:pwd,
-                mobile_code:HASH,
-                from:"BO"
+                from:"BO",
+                mobile_code:HASH
             }
             USER_NAME=name;
             USER_PASSWORD=pwd;
@@ -126,8 +136,8 @@ $(document).ready(function () {
                 var data = {
                     name:USER_NAME,
                     password:USER_PASSWORD,
-                    mobile_code:HASH,
-                    branch:branch
+                    branch:branch,
+                    mobile_code:HASH
                 }
                 callAjax("POST",GETMEMBER_URL,data,getMember,"Y","Y");
             }
@@ -174,6 +184,13 @@ $(document).ready(function () {
             $.mobile.changePage("homepage.html",{transition: "slide", reverse:true});
         });
         
+        
+        $(document).on("click", ".legendBtn", function(event) {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            $("#legendModal").modal('show');
+        });
+        
         $(document).on("change", "#branchOptionLocation", function(event) {
             event.stopPropagation();
             event.stopImmediatePropagation();
@@ -182,8 +199,8 @@ $(document).ready(function () {
                 var data = {
                     name:USER_NAME,
                     password:USER_PASSWORD,
-                    mobile_code:HASH,
-                    branch:branch
+                    branch:branch,
+                    mobile_code:HASH
                 }
                 callAjax("POST",GETMEMBER_URL,data,generateuserMap,"Y","N");
             }
@@ -206,16 +223,45 @@ $(document).ready(function () {
             $(".menuIcon").show();
             $(".backBtn").hide();
         } else {
+            $("#dateDiv").show();
             $(".menuIcon").hide();
             $(".backBtn").show();
+            //2016-05-17
+            var today = new Date();
+            var dd = today.getDate();
+            var mm = today.getMonth()+1; //January is 0!
+        
+            var yyyy = today.getFullYear();
+            if(dd<10){
+                dd='0'+dd
+            } 
+            if(mm<10){
+                mm='0'+mm
+            } 
+            var today = yyyy+'-'+mm+'-'+dd;
+            console.log(today);
+            
+            $("#trackDate").val(today);
+            
             var data = {
-                mobile_code: HASH,
-                name: selectedEmpl
+                name: selectedEmpl,
+                date: today,
+                mobile_code: HASH
             }
             callAjax("POST",GET_TRACK_URL,data,singelMap,"Y","N");
         }
-    });
-    
+        
+        $(document).on("change", "#trackDate", function(event) {
+            var today = $(this).val();
+            console.log(today);
+            var data = {
+                name: selectedEmpl,
+                date: today,
+                mobile_code: HASH
+            }
+            callAjax("POST",GET_TRACK_URL,data,singelMap,"Y","N");
+        });
+    }); 
 });
 
 function generateuserMap(res) {
@@ -275,7 +321,7 @@ function realtimeMap(res){
         marker = new google.maps.Marker({
             position: position,
             map: map,
-            icon: 'img/mitsuiMarker.png',
+            icon: 'img/finalMarker.png',
             title: markers[i][0]
         });
         
@@ -297,38 +343,62 @@ function realtimeMap(res){
         google.maps.event.removeListener(boundsListener);
     });
     
+    google.maps.event.addListener(map, "click", function(event) {
+        for (var i = 0; i < infoWindowContent.length; i++ ) {  //I assume you have your infoboxes in some array
+             infoWindow.close();
+        }
+    });
+    
     $("#employeeMap").css("display","block");
     $("#employeeListing").html(userList);
     $("#employeeList").show();
+    
+    google.maps.event.trigger(map, 'resize');
+    map.fitBounds(bounds);
 }
 
 function singelMap(res) {
     if (res.coords.length==0) {
-        showAlertCallback(GET_TRACK_NULL,returnPage);
+        loading.hide();
+        showAlert(GET_TRACK_NULL);
+    } else {
+        var mapOptions = {
+            zoom: 3,
+            center: {lat: 0, lng: -180},
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        var map = new google.maps.Map(document.getElementById("employeeMap"),mapOptions);
+        var bounds = new google.maps.LatLngBounds();
+        
+        var dHeight=$(document).height()-50;
+        $("#employeeMap").css("height",dHeight+"px");
+        var pathCoord = [];
+        var modLength = 0;
+        if (res.coords.length>8) {
+            modLength = Math.ceil(res.coords.length / 8);
+        }
+        var minWay = 0;
+        var maxWay = 8;
+        
+        console.log(modLength);
+        
+        if (modLength>0) {
+            for(var i=0;i<modLength;i++){
+                wayPointGenerate(map, bounds, res,minWay,maxWay);
+                minWay = minWay+8;
+                maxWay = maxWay+8;
+            }   
+        } else {
+            wayPointGenerate(map, bounds, res,minWay,maxWay);
+        }
+        
+        $("#employeeMap").css("display","block");
+        loading.hide();
+          
+        google.maps.event.trigger(map, 'resize');
+        map.fitBounds(bounds);
+        $(".legend").show();   
     }
-    
-    var mapOptions = {
-      zoom: 3,
-      center: {lat: 0, lng: -180},
-      mapTypeId: google.maps.MapTypeId.ROADMAP
-    };
-    var map = new google.maps.Map(document.getElementById("employeeMap"),mapOptions);
-    
-    var dHeight=$(document).height()-50;
-    $("#employeeMap").css("height",dHeight+"px");
-    var pathCoord = [];
-    var modLength = Math.floor(res.coords.length / 8);
-    var minWay = 0;
-    var maxWay = 8;
-    
-    for(var i=0;i<=modLength+1;i++){
-        wayPointGenerate(map, res,minWay,maxWay);
-        minWay = minWay+7;
-        maxWay = maxWay+7;
-    }
-    
-    $("#employeeMap").css("display","block");
-    loading.hide();
 }
 
 var stepDisplay;
@@ -336,17 +406,16 @@ var markerArray = [];
 var infowindow = null;
 var marker = null;
 
-function wayPointGenerate(map, res,minWay,maxWay) {
+function wayPointGenerate(map, bounds, res,minWay,maxWay) {
     var pathCoord = [];
     // Multiple Markers
     var markers = [];
     // Info Window Content
     var infoWindowContent = [];
     var waypts=[];
-    var bounds = new google.maps.LatLngBounds();
     
     if (maxWay>res.coords.length) {
-        maxWay=res.coords.length-1;
+        maxWay=res.coords.length;
     }
     
     for (var i=minWay;i<maxWay;i++){
@@ -355,9 +424,20 @@ function wayPointGenerate(map, res,minWay,maxWay) {
         latlngobj.lng = res.coords[i].longitude;
         pathCoord.push(latlngobj);
         
+        var iconMarker = "img/finalMarker_small.png";
+        if (res.coords[i].check_in==1) {
+            iconMarker = "img/finalMarkerCheckin.png";
+        } else if (i==0 && minWay==0) {
+            iconMarker = "img/finalMarker.png";
+        } else if (i==res.coords.length-1 && maxWay==res.coords.length) {
+            iconMarker = "img/finalMarkerEnd.png";
+        }
+        
+        console.log("INDEX + " + i + " MARKER LENG " +markers.length+ "  MAX WAY + " + maxWay + " legnth " + res.coords.length);
+        
         var singelMarker=[];
         var singelInfoWindow=[];
-        singelMarker.push("title",res.coords[i].latitude,res.coords[i].longitude);
+        singelMarker.push("title",res.coords[i].latitude,res.coords[i].longitude,iconMarker);
         markers.push(singelMarker);
         var time = res.coords[i].datetime.date.split(".")[0];
         singelInfoWindow.push('<div class="info_content"><h4>'+selectedEmpl+'</h4><p><b>'+res.coords[i].address+'</b><br/>'+time+'</p></div>');
@@ -376,6 +456,7 @@ function wayPointGenerate(map, res,minWay,maxWay) {
           waypts.push({location: pathCoord[j],stopover: true});
     }
     
+    console.log(pathCoord[0]);
     var request = {
         origin: pathCoord[0],
         destination: pathCoord[pathCoord.length-1],
@@ -405,25 +486,25 @@ function wayPointGenerate(map, res,minWay,maxWay) {
     // Display multiple markers on a map
     var infoWindow = new google.maps.InfoWindow(), marker, i;
     
-    // Loop through our array of markers & place each one on the map  
+    // Loop through our array of markers & place each one on the map
+    console.log("JUNLAH MARKER " + markers);
     for( i = 0; i < markers.length; i++ ) {
-        
-        var iconMarker = "img/mitsuiMarker.png";
-        console.log("MIN = "+minWay + " MAX = " + maxWay );
-        if (i==0 && minWay==0) {
-            console.log("MIN");
-            iconMarker = "img/mitsuiMarkerBegin.png";
-        } else if (i==markers.length-1 && maxWay==res.coords.length-1) {
-            console.log(res.coords[maxWay].latitude +  "  " +res.coords[maxWay].longitude);
-            iconMarker = "img/mitsuiMarkerEnd.png";
-        }
+        //console.log(JSON.stringify(res.coords[i]) + " " + i);
+        //var iconMarker = "img/finalMarker.png";
+        //if (res.coords[i].check_in==1) {
+        //    iconMarker = "img/finalMarkerCheckin.png";
+        //} else if (i==0 && minWay==0) {
+        //    iconMarker = "img/finalMarkerEnd.png";
+        //} else if (i==markers.length-1 && maxWay==res.coords.length) {
+        //    iconMarker = "img/finalMarkerEnd.png";
+        //} 
         
         var position = new google.maps.LatLng(markers[i][1], markers[i][2]);
         bounds.extend(position);
         marker = new google.maps.Marker({
             position: position,
             map: map,
-            icon: iconMarker,
+            icon: markers[i][3],
             title: markers[i][0]
         });
         
@@ -434,6 +515,12 @@ function wayPointGenerate(map, res,minWay,maxWay) {
                 infoWindow.open(map, marker);
             }
         })(marker, i));
+        
+        google.maps.event.addListener(map, "click", function(event) {
+            for (var i = 0; i < infoWindowContent.length; i++ ) {  //I assume you have your infoboxes in some array
+                 infoWindow.close();
+            }
+        });
 
         // Automatically center the map fitting all markers on the screen
         map.fitBounds(bounds);
@@ -472,7 +559,7 @@ function getDeviceType() {
 };
 
 function showAlert(content) {
-    var restHtml= '     <div class="modal-dialog modal-sm">'+
+    var restHtml= '     <div class="modal-dialog modal-sm alertBody">'+
                    '       <div class="modal-content">'+
                    '         <div class="modal-header">'+
                    '           <h4 class="modal-title">Mitsui Leasing</h4>'+
@@ -499,7 +586,7 @@ function showAlertCallback(content,callback) {
                    '           <p>'+content+'</p>'+
                    '         </div>'+
                    '         <div class="modal-footer">'+
-                   '           <button type="button" class="btn btn-default" onclick="'+callback+'()" data-dismiss="modal">Close</button>'+
+                   '           <div type="button" class="btn btn-default" onclick="'+callback()+'" data-dismiss="modal">Close</div>'+
                    '         </div>'+
                    '       </div>'+        
                    '     </div>';
@@ -549,6 +636,11 @@ function callAjax(method,url,data,callback,before,after) {
             }
         },
         success: function (response) {
+            if (response==null) {
+                loading.hide();
+                showAlertCallback(AJAX_ERROR,returnPage);
+                return;
+            }
             if (PROFILE=="DEV") {
                 response = $.parseJSON(response);   
             }
@@ -556,7 +648,7 @@ function callAjax(method,url,data,callback,before,after) {
             if(response.status == 1) {
                 callback(response);
             } else {
-                $.mobile.loading('hide');
+                loading.hide();
                 showAlert(response.msg);
             }
             if (after=="Y") {
@@ -565,10 +657,10 @@ function callAjax(method,url,data,callback,before,after) {
         },
         error: function (xhr, ajaxOptions, thrownError) {
             if(ajaxOptions === "timeout") {
-                $.mobile.loading('hide');
+                loading.hide();
                 showAlert(AJAX_TIMEOUT);
             } else {
-                $.mobile.loading('hide');
+                loading.hide();
                 showAlert(ajaxOptions);
             }
         }

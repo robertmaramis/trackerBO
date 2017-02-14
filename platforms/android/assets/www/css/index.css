@@ -542,7 +542,7 @@ h1 {
     clear: both;
     border-bottom: 1px solid #636164;
 }
-#branchLocation {display: none;}
+#branchLocation, #dateDiv {display: none;}
 .filterTitle {
     padding: 20px 10px;
     display: block;
@@ -555,6 +555,19 @@ h1 {
     width: 65%;
     float: left;
 }
+
+#dateDiv {
+    border-bottom: 1px solid #636164;
+}
+
+#dateDiv .filterTitle {
+    width: 20%;
+}
+#dateDiv #branchOption_div {
+    padding: 7px 10px;
+    width: 80%;
+}
+
 .filterBtn {
     float: left;
     padding: 15px;
@@ -742,10 +755,37 @@ color:#3985DC;
 .legend {
     display: none;
 }
-.legend img {
-    width: 45%;
+
+.fl {
+    float: left;
+}
+
+.legendBtn {
     position: absolute;
-    top: 60px;
-    right: 10px;
+    color: #FFFFFF;
+    top: 12px;
+    right: 13px;
+}
+#legendModal {
+    padding: 0px;
+    margin: 0px;
+}
+
+#legendModal img {
+    width: 100%;
+    position: absolute;
+    top: 95px;
+    right: 0px;
     z-index: 999;
+}
+.info_content {
+    font-size: 11px;
+    width: 160px;
+    padding: 0px;
+}
+
+.info_content h4 {
+    font-size: 15px;
+    padding: 5px 0px;
+    margin: 0px;
 }

@@ -1,18 +1,19 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.scratch.appTrackerBO" version="1.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-    <preference name="AllowInlineMediaPlayback" value="false" />
-    <preference name="BackupWebStorage" value="cloud" />
-    <preference name="DisallowOverscroll" value="false" />
-    <preference name="EnableViewportScale" value="false" />
-    <preference name="KeyboardDisplayRequiresUserAction" value="true" />
-    <preference name="MediaPlaybackRequiresUserAction" value="false" />
-    <preference name="SuppressesIncrementalRendering" value="false" />
-    <preference name="GapBetweenPages" value="0" />
-    <preference name="PageLength" value="0" />
-    <preference name="PaginationBreakingMode" value="page" />
-    <preference name="PaginationMode" value="unpaginated" />
+<widget id="co.id.mitsuilease.trackerBO" version="1.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <feature name="LocalStorage">
         <param name="ios-package" value="CDVLocalStorage" />
+    </feature>
+    <feature name="HandleOpenUrl">
+        <param name="ios-package" value="CDVHandleOpenURL" />
+        <param name="onload" value="true" />
+    </feature>
+    <feature name="IntentAndNavigationFilter">
+        <param name="ios-package" value="CDVIntentAndNavigationFilter" />
+        <param name="onload" value="true" />
+    </feature>
+    <feature name="GestureHandler">
+        <param name="ios-package" value="CDVGestureHandler" />
+        <param name="onload" value="true" />
     </feature>
     <feature name="Console">
         <param name="ios-package" value="CDVLogger" />
@@ -24,18 +25,6 @@
         <param name="ios-package" value="CDVSplashScreen" />
         <param name="onload" value="true" />
     </feature>
-    <splash height="480" src="www/res/screen/ios/Default~iphone.png" width="320" />
-    <splash height="960" src="www/res/screen/ios/@2x~iphone.png" width="640" />
-    <splash height="1024" src="www/res/screen/ios/Default-Portrait~ipad.png" width="768" />
-    <splash height="2048" src="www/res/screen/ios/Default-Portrait@2x~ipad.png" width="1536" />
-    <splash height="768" src="www/res/screen/ios/Default-Landscape~ipad.png" width="1024" />
-    <splash height="1536" src="www/res/screen/ios/Default-Landscape@2x~ipad.png" width="2048" />
-    <splash height="1136" src="www/res/screen/ios/Default-568h@2x~iDefaultphone.png" width="640" />
-    <splash height="1334" src="www/res/screen/ios/Default-667h.png" width="750" />
-    <splash height="2208" src="www/res/screen/ios/Default-736h.png" width="1242" />
-    <splash height="1242" src="www/res/screen/ios/Default-Landscape-736h.png" width="2208" />
-    <allow-intent href="itms:*" />
-    <allow-intent href="itms-apps:*" />
     <name>App Tracker BO</name>
     <description>
         App Tracker BO
@@ -44,6 +33,32 @@
         Backstage design
     </author>
     <content src="index.html" />
+    <access origin="*" />
+    <access origin="*://*.googleapis.com/*" subdomains="true" />
+    <access origin="*://*.gstatic.com/*" subdomains="true" />
+    <access origin="*://*.google.com/*" subdomains="true" />
+    <access origin="*://*.googleusercontent.com/*" subdomains="true" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    <allow-intent href="itms:*" />
+    <allow-intent href="itms-apps:*" />
+    <preference name="AllowInlineMediaPlayback" value="false" />
+    <preference name="BackupWebStorage" value="local" />
+    <preference name="DisallowOverscroll" value="false" />
+    <preference name="EnableViewportScale" value="false" />
+    <preference name="KeyboardDisplayRequiresUserAction" value="true" />
+    <preference name="MediaPlaybackRequiresUserAction" value="false" />
+    <preference name="SuppressesIncrementalRendering" value="false" />
+    <preference name="SuppressesLongPressGesture" value="false" />
+    <preference name="Suppresses3DTouchGesture" value="false" />
+    <preference name="GapBetweenPages" value="0" />
+    <preference name="PageLength" value="0" />
+    <preference name="PaginationBreakingMode" value="page" />
+    <preference name="PaginationMode" value="unpaginated" />
     <preference name="permissions" value="none" />
     <preference name="orientation" value="default" />
     <preference name="target-device" value="universal" />
@@ -63,18 +78,6 @@
     <preference name="SplashScreen" value="screen" />
     <preference name="SplashScreenDelay" value="5000" />
     <preference name="SplashMaintainAspectRatio" value="true" />
-    <preference name="android-minSdkVersion" value="10" />
+    <preference name="android-minSdkVersion" value="14" />
     <preference name="android-installLocation" value="auto" />
-    <preference name="BackupWebStorage" value="local" />
-    <access origin="*" />
-    <access origin="*://*.googleapis.com/*" subdomains="true" />
-    <access origin="*://*.gstatic.com/*" subdomains="true" />
-    <access origin="*://*.google.com/*" subdomains="true" />
-    <access origin="*://*.googleusercontent.com/*" subdomains="true" />
-    <allow-intent href="http://*/*" />
-    <allow-intent href="https://*/*" />
-    <allow-intent href="tel:*" />
-    <allow-intent href="sms:*" />
-    <allow-intent href="mailto:*" />
-    <allow-intent href="geo:*" />
 </widget>

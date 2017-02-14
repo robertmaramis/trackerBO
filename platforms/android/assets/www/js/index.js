@@ -184,6 +184,13 @@ $(document).ready(function () {
             $.mobile.changePage("homepage.html",{transition: "slide", reverse:true});
         });
         
+        
+        $(document).on("click", ".legendBtn", function(event) {
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            $("#legendModal").modal('show');
+        });
+        
         $(document).on("change", "#branchOptionLocation", function(event) {
             event.stopPropagation();
             event.stopImmediatePropagation();
@@ -216,16 +223,45 @@ $(document).ready(function () {
             $(".menuIcon").show();
             $(".backBtn").hide();
         } else {
+            $("#dateDiv").show();
             $(".menuIcon").hide();
             $(".backBtn").show();
+            //2016-05-17
+            var today = new Date();
+            var dd = today.getDate();
+            var mm = today.getMonth()+1; //January is 0!
+        
+            var yyyy = today.getFullYear();
+            if(dd<10){
+                dd='0'+dd
+            } 
+            if(mm<10){
+                mm='0'+mm
+            } 
+            var today = yyyy+'-'+mm+'-'+dd;
+            console.log(today);
+            
+            $("#trackDate").val(today);
+            
             var data = {
                 name: selectedEmpl,
+                date: today,
                 mobile_code: HASH
             }
             callAjax("POST",GET_TRACK_URL,data,singelMap,"Y","N");
         }
-    });
-    
+        
+        $(document).on("change", "#trackDate", function(event) {
+            var today = $(this).val();
+            console.log(today);
+            var data = {
+                name: selectedEmpl,
+                date: today,
+                mobile_code: HASH
+            }
+            callAjax("POST",GET_TRACK_URL,data,singelMap,"Y","N");
+        });
+    }); 
 });
 
 function generateuserMap(res) {
@@ -307,6 +343,12 @@ function realtimeMap(res){
         google.maps.event.removeListener(boundsListener);
     });
     
+    google.maps.event.addListener(map, "click", function(event) {
+        for (var i = 0; i < infoWindowContent.length; i++ ) {  //I assume you have your infoboxes in some array
+             infoWindow.close();
+        }
+    });
+    
     $("#employeeMap").css("display","block");
     $("#employeeListing").html(userList);
     $("#employeeList").show();
@@ -318,46 +360,45 @@ function realtimeMap(res){
 function singelMap(res) {
     if (res.coords.length==0) {
         loading.hide();
-        showAlertCallback(GET_TRACK_NULL,returnPage);
-        return;
-    }
-    
-    var mapOptions = {
-      zoom: 3,
-      center: {lat: 0, lng: -180},
-      mapTypeId: google.maps.MapTypeId.ROADMAP
-    };
-    var map = new google.maps.Map(document.getElementById("employeeMap"),mapOptions);
-    var bounds = new google.maps.LatLngBounds();
-    
-    var dHeight=$(document).height()-50;
-    $("#employeeMap").css("height",dHeight+"px");
-    var pathCoord = [];
-    var modLength = 0;
-    if (res.coords.length>8) {
-        modLength = Math.ceil(res.coords.length / 8);
-    }
-    var minWay = 0;
-    var maxWay = 8;
-    
-    console.log(modLength);
-    
-    if (modLength>0) {
-        for(var i=0;i<modLength;i++){
-            wayPointGenerate(map, bounds, res,minWay,maxWay);
-            minWay = minWay+8;
-            maxWay = maxWay+8;
-        }   
+        showAlert(GET_TRACK_NULL);
     } else {
-        wayPointGenerate(map, bounds, res,minWay,maxWay);
+        var mapOptions = {
+            zoom: 3,
+            center: {lat: 0, lng: -180},
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        var map = new google.maps.Map(document.getElementById("employeeMap"),mapOptions);
+        var bounds = new google.maps.LatLngBounds();
+        
+        var dHeight=$(document).height()-50;
+        $("#employeeMap").css("height",dHeight+"px");
+        var pathCoord = [];
+        var modLength = 0;
+        if (res.coords.length>8) {
+            modLength = Math.ceil(res.coords.length / 8);
+        }
+        var minWay = 0;
+        var maxWay = 8;
+        
+        console.log(modLength);
+        
+        if (modLength>0) {
+            for(var i=0;i<modLength;i++){
+                wayPointGenerate(map, bounds, res,minWay,maxWay);
+                minWay = minWay+8;
+                maxWay = maxWay+8;
+            }   
+        } else {
+            wayPointGenerate(map, bounds, res,minWay,maxWay);
+        }
+        
+        $("#employeeMap").css("display","block");
+        loading.hide();
+          
+        google.maps.event.trigger(map, 'resize');
+        map.fitBounds(bounds);
+        $(".legend").show();   
     }
-    
-    $("#employeeMap").css("display","block");
-    loading.hide();
-    
-    google.maps.event.trigger(map, 'resize');
-    map.fitBounds(bounds);
-    $(".legend").show();
 }
 
 var stepDisplay;
@@ -383,14 +424,16 @@ function wayPointGenerate(map, bounds, res,minWay,maxWay) {
         latlngobj.lng = res.coords[i].longitude;
         pathCoord.push(latlngobj);
         
-        var iconMarker = "img/finalMarker.png";
+        var iconMarker = "img/finalMarker_small.png";
         if (res.coords[i].check_in==1) {
             iconMarker = "img/finalMarkerCheckin.png";
         } else if (i==0 && minWay==0) {
-            iconMarker = "img/finalMarkerEnd.png";
-        } else if (i==markers.length-1 && maxWay==res.coords.length) {
+            iconMarker = "img/finalMarker.png";
+        } else if (i==res.coords.length-1 && maxWay==res.coords.length) {
             iconMarker = "img/finalMarkerEnd.png";
         }
+        
+        console.log("INDEX + " + i + " MARKER LENG " +markers.length+ "  MAX WAY + " + maxWay + " legnth " + res.coords.length);
         
         var singelMarker=[];
         var singelInfoWindow=[];
@@ -472,6 +515,12 @@ function wayPointGenerate(map, bounds, res,minWay,maxWay) {
                 infoWindow.open(map, marker);
             }
         })(marker, i));
+        
+        google.maps.event.addListener(map, "click", function(event) {
+            for (var i = 0; i < infoWindowContent.length; i++ ) {  //I assume you have your infoboxes in some array
+                 infoWindow.close();
+            }
+        });
 
         // Automatically center the map fitting all markers on the screen
         map.fitBounds(bounds);

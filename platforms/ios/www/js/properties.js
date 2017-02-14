@@ -1,4 +1,4 @@
-var PROFILE="DEV",
+var PROFILE="PROD",
 SECRET="mitsui",
 CODE="!@#$AppTracker*&^%",
 HASH = CryptoJS.SHA1(CryptoJS.SHA1(SECRET)+CODE)+"",
@@ -14,7 +14,8 @@ USER_BRANCH="";
 var
 LOGIN_NAME_EMPTY="Please fill your user name",
 LOGIN_PASSWORD_EMPTY="Please fill your user password",
-GET_TRACK_NULL="Failed to get location, please try again later";
+GET_TRACK_NULL="No Data for this date",
+AJAX_ERROR="Failed connect to server, please try again later";
 
 if (PROFILE=="DEV") {
     var

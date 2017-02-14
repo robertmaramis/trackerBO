@@ -145,7 +145,8 @@ h1 {
     border-radius: 5px;
     font-weight: lighter;
     text-align: center;
-    margin: 30px 20px;
+    background: transparent;
+    margin: 30px 10px;
     padding: 14px 0px;
     cursor: pointer;
     color: #ffffff;
@@ -222,6 +223,7 @@ h1 {
     width:280px;
     left: 50%;
     min-height: 30%;
+    min-height: 172px;
 }
 .modal-content {
     min-height:100%;
@@ -540,7 +542,7 @@ h1 {
     clear: both;
     border-bottom: 1px solid #636164;
 }
-#branchLocation {display: none;}
+#branchLocation, #dateDiv {display: none;}
 .filterTitle {
     padding: 20px 10px;
     display: block;
@@ -553,6 +555,19 @@ h1 {
     width: 65%;
     float: left;
 }
+
+#dateDiv {
+    border-bottom: 1px solid #636164;
+}
+
+#dateDiv .filterTitle {
+    width: 20%;
+}
+#dateDiv #branchOption_div {
+    padding: 7px 10px;
+    width: 80%;
+}
+
 .filterBtn {
     float: left;
     padding: 15px;
@@ -731,4 +746,46 @@ color:#3985DC;
 	100%{
 	-moz-transform:scale(.3)
 	}
+}
+
+.alertBody {
+    z-index: 999999;
+}
+
+.legend {
+    display: none;
+}
+
+.fl {
+    float: left;
+}
+
+.legendBtn {
+    position: absolute;
+    color: #FFFFFF;
+    top: 12px;
+    right: 13px;
+}
+#legendModal {
+    padding: 0px;
+    margin: 0px;
+}
+
+#legendModal img {
+    width: 100%;
+    position: absolute;
+    top: 95px;
+    right: 0px;
+    z-index: 999;
+}
+.info_content {
+    font-size: 11px;
+    width: 160px;
+    padding: 0px;
+}
+
+.info_content h4 {
+    font-size: 15px;
+    padding: 5px 0px;
+    margin: 0px;
 }
